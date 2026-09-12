@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card generator-card" aria-labelledby="generator-heading">
+  <div class="section-heading"><div><p class="section-kicker">CODE SETTINGS</p><h2 id="generator-heading">Create a secure code</h2></div><span class="security-badge">Cryptographically secure</span></div>
+  <form action="{{ url_for('generate') }}" method="post" class="form-grid">
+    <label for="purpose">Purpose</label><select name="purpose" id="purpose"><option value="suggested" {% if purpose == 'suggested' %}selected{% endif %}>Suggested secure code</option><option value="verification" {% if purpose == 'verification' %}selected{% endif %}>Temporary verification code</option></select>
+    <label for="code-type">Code type</label><select name="code_type" id="code-type"><option value="numeric" {% if code_type == 'numeric' %}selected{% endif %}>Numeric (0–9)</option><option value="alphanumeric" {% if code_type == 'alphanumeric' %}selected{% endif %}>Alphanumeric (A–Z, 0–9)</option></select>
+    <label for="length">Code length</label><input name="length" id="length" type="number" min="{{ limits.MIN_CODE_LENGTH }}" max="{{ limits.MAX_CODE_LENGTH }}" value="{{ length or 6 }}" required aria-describedby="length-help"><p class="field-help" id="length-help">Choose {{ limits.MIN_CODE_LENGTH }}–{{ limits.MAX_CODE_LENGTH }} characters.</p>
+    <label for="expires-in">Expiration period</label><select name="expires_in" id="expires-in">{% for minutes in limits.ALLOWED_EXPIRATIONS %}<option value="{{ minutes }}" {% if expires_in == minutes %}selected{% endif %}>{{ minutes }} minute{{ '' if minutes == 1 else 's' }}</option>{% endfor %}</select><p class="field-help">Used only for temporary verification codes.</p>
+    <button class="primary full-width" type="submit">Generate secure code</button>
+  </form>
+</section>
+
+{% if generated_code %}
+<section class="card verification-card" aria-labelledby="result-heading" {% if verification %}data-verification-id="{{ verification.id }}" data-expires-at="{{ verification.expires_at }}"{% endif %}>
+  <div class="section-heading"><div><p class="section-kicker">{{ 'TEMPORARY VERIFICATION CODE' if verification else 'GENERATED CODE' }}</p><h2 id="result-heading">Generated Code</h2></div>{% if verification %}<span class="status-chip" id="code-status">Active</span>{% endif %}</div>
+  <output id="generated-code" class="code-display" aria-live="polite">{{ generated_code }}</output>
+  {% if verification %}<div class="countdown-panel" aria-live="polite"><span>Expires in</span><strong id="countdown">--:--</strong></div>{% endif %}
+  <div class="actions"><button type="button" class="secondary" id="copy-button">Copy Code</button><a class="button-link primary" href="{{ url_for('index') }}">Generate New Code</a></div>
+  {% if verification %}
+  <hr>
+  <section class="verify-area" aria-labelledby="verify-heading">
+    <div class="section-heading compact"><div><p class="section-kicker">LOCAL DEMONSTRATION</p><h2 id="verify-heading">Verify Your Code</h2></div><span class="attempts" id="attempts-remaining">{{ verification.attempts_remaining }} attempts remaining</span></div>
+    <p class="hint" id="verification-help">The code is stored only as a salted hash and can be used once.</p>
+    <div class="notice hidden" id="verification-message" role="status" aria-live="polite"></div>
+    <form action="{{ url_for('verify') }}" method="post" class="verify-form" id="verify-form"><input type="hidden" name="verification_id" value="{{ verification.id }}"><label for="submitted-code">Enter verification code</label><input name="submitted_code" id="submitted-code" autocomplete="one-time-code" inputmode="text" maxlength="{{ length }}" required aria-describedby="verification-help"><button class="primary" type="submit" id="verify-button">Verify Code</button></form>
+  </section>
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/app.js') }}"></script>{% endblock %}
